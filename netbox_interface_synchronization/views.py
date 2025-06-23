@@ -645,3 +645,54 @@ class DeviceBayComparisonView(LoginRequiredMixin, PermissionRequiredMixin, View)
 
             return post_components(request, device, devicebays, devicebays_templates, DeviceBay, DeviceBayTemplate,
                                    unified_devicebays, unified_devicebay_templates, "device bays")
+
+
+class ModuleBayComparisonView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Comparison of module bays between a device and a device type and beautiful visualization"""
+    permission_required = (
+    "dcim.view_modulebay", "dcim.add_modulebay", "dcim.change_modulebay", "dcim.delete_modulebay")
+
+    def get(self, request, device_id):
+        device = get_object_or_404(Device.objects.filter(id=device_id))
+        modulebays = device.modulebays.all()
+        modulebays_templates = ModuleBayTemplate.objects.filter(device_type=device.device_type)
+
+        unified_modulebays = [
+            ModuleBayComparison(i.id, i.name, i.label, i.position, i.description) for i 
+            in modulebays]
+        unified_modulebays_templates = [
+            ModuleBayComparison(i.id, i.name, i.label, i.position, i.description, is_template=True)
+            for i in modulebays_templates]
+
+        return get_components(request, device, modulebays, unified_modulebays, unified_modulebays_templates,
+            "Module Bays")
+
+    def post(self, request, device_id):
+        form = ComponentComparisonForm(request.POST)
+        if form.is_valid():
+            device = get_object_or_404(Device.objects.filter(id=device_id))
+
+            modulebays = device.modulebays.all()
+            modulebays_templates = ModuleBayTemplate.objects.filter(device_type=device.device_type)
+
+            # Getting and validating a list of module bays to rename
+            fix_name_components = filter(
+                lambda i: str(i.id) in request.POST.getlist("fix_name"), modulebays
+            )
+
+            unified_modulebays_templates = [
+                ModuleBayComparison(i.id, i.name, i.label, i.position, i.description, is_template=True)
+                                    for i in modulebays_templates]
+
+            unified_modulebays = []
+
+            for component in fix_name_components:
+                unified_modulebays.append((component, ModuleBayComparison(
+                    component.id,
+                    component.name,
+                    component.label,
+                    component.position,
+                    component.description
+                )))
+
+            return post_components(request, device, modulebays, modulebays_templates, ModuleBay, ModuleBayTemplate, unified_modulebays, unified_modulebays_templates, "module bays")
