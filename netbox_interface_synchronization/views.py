@@ -645,3 +645,81 @@ class DeviceBayComparisonView(LoginRequiredMixin, PermissionRequiredMixin, View)
 
             return post_components(request, device, devicebays, devicebays_templates, DeviceBay, DeviceBayTemplate,
                                    unified_devicebays, unified_devicebay_templates, "device bays")
+
+class ModuleBayComparisonView(View):
+    def get(self, request, device_id):
+        device = get_object_or_404(Device, id=device_id)
+        module_bays = ModuleBay.objects.filter(device=device)
+        module_bay_templates = ModuleBayTemplate.objects.filter(device_type=device.device_type)
+
+        unified_module_bays = [
+            ModuleBayComparison(
+                id=bay.id,
+                name=bay.name,
+                label=bay.label or "",
+                description=bay.description or "",
+                is_template=False,
+            )
+            for bay in module_bays
+        ]
+        unified_module_bay_templates = [
+            ModuleBayComparison(
+                id=template.id,
+                name=template.name,
+                label=template.label or "",
+                description=template.description or "",
+                is_template=True,
+            )
+            for template in module_bay_templates
+        ]
+
+        return get_components(
+            request,
+            device,
+            module_bays,
+            unified_module_bays,
+            unified_module_bay_templates,
+            "Module Bays",
+        )
+
+    def post(self, request, device_id):
+        device = get_object_or_404(Device, id=device_id)
+        module_bays = ModuleBay.objects.filter(device=device)
+        module_bay_templates = ModuleBayTemplate.objects.filter(device_type=device.device_type)
+
+        unified_module_bays = [
+            ModuleBayComparison(
+                id=bay.id,
+                name=bay.name,
+                label=bay.label or "",
+                description=bay.description or "",
+                is_template=False,
+            )
+            for bay in module_bays
+        ]
+        unified_module_bay_templates = [
+            ModuleBayComparison(
+                id=template.id,
+                name=template.name,
+                label=template.label or "",
+                description=template.description or "",
+                is_template=True,
+            )
+            for template in module_bay_templates
+        ]
+
+        # The unified_component parameter for post_components expects a list of tuples (component, comparison)
+        # We'll use zip here for the actual components and their unified representations
+        zipped = list(zip(module_bays, unified_module_bays))
+
+        return post_components(
+            request,
+            device,
+            module_bays,
+            module_bay_templates,
+            ModuleBay,
+            ModuleBayTemplate,
+            zipped,
+            unified_module_bay_templates,
+            "module bays",
+        )
